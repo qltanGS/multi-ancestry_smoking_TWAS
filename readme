@@ -1,0 +1,44 @@
+##############################################################################################################
+work_recode
+#01_split chr
+for i in `seq 26`;do plink --bfile geuvadis421 --chr "$i" --recodeA --out ./tmp/geuvadis421_chr"$i";done
+
+#02_calculate cov
+nohup plink --threads 20 -bfile geuvadis421 --pca 5 --out ./tmp/geuvadis421_pca_result &
+
+#03_to inpt of MatrixeQTL
+to_matrixeqtl_input.r
+
+#04_run matrixeQTL
+matrix_eqtl.r
+run_matrixeqtl.sh #slurm-job-id: 53060372
+
+#05_merge_all_chr_result
+sed -i '1d' geuvadis_eQTL_cis_chr*.txt
+for i in {1..22};do cat geuvadis_eQTL_cis_chr"$i".txt >>geuvadis_eQTL_cis.txt;done
+sed -e '1i SNP\tgene\tbeta\tt-stat\tp-value\tFDR' geuvadis_eQTL_cis.txt >geuvadis_eQTL_cis.txt 
+
+./summary_stat_prediction/geuvadis/eqtl/geuvadis_eQTL_cis.txt
+
+#06_add snp info to eqtl result
+add_snp_info_to_eqtl.r
+
+./summary_stat_prediction/geuvadis/eqtl/geuvadis_eQTL_with_info.txt
+
+#07_run prscs
+prscs_eqtl.r
+run_prscs.sh
+
+#08_calculate predicted values
+plink_score.r
+run_plink.sh
+
+#09_calculate individule predicted
+indi_plink_score.r
+run_indi_plink.sh
+
+#10_integration results
+integration.r
+
+#11_compare result and plot
+compare_work.r
